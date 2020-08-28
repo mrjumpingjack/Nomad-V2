@@ -1,0 +1,101 @@
+﻿<Window x:Class="ControllPanel.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ControllPanel"
+        xmlns:map="clr-namespace:GMap.NET;assembly=GMap.NET.Core"
+        xmlns:mapsrc="clr-namespace:GMap.NET.WindowsPresentation;assembly=GMap.NET.WindowsPresentation" 
+        xmlns:vlc="clr-namespace:Vlc.DotNet.Wpf;assembly=Vlc.DotNet.Wpf"
+        xmlns:Converters="clr-namespace:ControllPanel.Converters"
+        Loaded="Window_Loaded"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <Converters:DoubleToColorConverter x:Key="DoubleToColorConverter"/>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+
+    <Grid>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Menu Height="20" VerticalAlignment="Top" HorizontalAlignment="Stretch">
+            <MenuItem>
+                <MenuItem.Header>
+                    <TextBlock Text="File"/>
+                </MenuItem.Header>
+                <MenuItem Click="MenuItemExit_Click">
+                    <MenuItem.Header>
+                        <TextBlock Text="Exit"/>
+                    </MenuItem.Header>
+                </MenuItem>
+
+            </MenuItem>
+        </Menu>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <mapsrc:GMapControl x:Name="MainMap" Zoom="13" MaxZoom="24" MinZoom="1" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Grid.ColumnSpan="1">
+                <mapsrc:GMapControl.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Go here!" Click="GoHere_Click"/>
+                    </ContextMenu>
+                </mapsrc:GMapControl.ContextMenu>
+            </mapsrc:GMapControl>
+
+            <StackPanel Margin="5" Grid.Column="0" Grid.Row="2">
+                <!--<CheckBox Content="Always center on vehicle" Checked="{Binding GoToCarPosOnUpdate}"/>-->
+                <TextBlock Text="{Binding CurrentCarPos}"/>
+                <TextBlock Text="{Binding CurrentCarHeading}"/>
+                <TextBlock Text="{Binding Rotations}"/>
+                <TextBlock Text="{Binding SpeedinKMh}"/>
+                <ListBox ItemsSource="{Binding Distances}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Grid.Column="1" Margin="5">
+                <RadioButton Content="Direct" Checked="On_ModeDirect" IsChecked="True"/>
+                <RadioButton Content="Automatic" Checked="On_ModeAuto"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBox Width="160" Margin="0,0,5,0" x:Name="TB_Target"/>
+                    <Button HorizontalAlignment="Right" Content="GO!" Width="80" Click="On_BtnGoHere"/>
+                </StackPanel>
+                <Button HorizontalAlignment="Left" Content="Explore!" Margin="0,10,0,0" Width="80" Click="On_BtnExplore"/>
+            </StackPanel>
+
+
+            <Vlc:VlcControl  xmlns:Vlc="clr-namespace:Vlc.DotNet.Wpf;assembly=Vlc.DotNet.Wpf" x:Name="MyControl" Grid.Column="1" Grid.Row="0"/>
+
+
+            <StackPanel x:Name="ColINFOW" Grid.Column="1" Grid.Row="1">
+                <DockPanel>
+                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFront, Converter={StaticResource DoubleToColorConverter}}"/>
+                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFrontGab, Converter={StaticResource DoubleToColorConverter}}"/>
+
+                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Bottom" Margin="0,-55" Height="30" Width="100" Background="{Binding ValueBack, Converter={StaticResource DoubleToColorConverter}}"/>
+
+                    <Canvas VerticalAlignment="Center" HorizontalAlignment="Left" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueLeft, Converter={StaticResource DoubleToColorConverter}}"/>
+
+                    <Canvas VerticalAlignment="Center" HorizontalAlignment="Right" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueRight, Converter={StaticResource DoubleToColorConverter}}"/>
+                </DockPanel>
+            </StackPanel>
+
+        </Grid>
+    </Grid>
+</Window>

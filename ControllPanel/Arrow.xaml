@@ -1,0 +1,16 @@
+﻿<UserControl x:Class="ControllPanel.Arrow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ControllPanel"
+             mc:Ignorable="d" 
+            d:DesignHeight="80" d:DesignWidth="50" Height="100" Width="100">
+    <Grid>
+        <Image Source="pack://application:,,,/Images/Arrow.png" Height="100" Width="100" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Image.RenderTransform>
+                <RotateTransform Angle="-90" CenterX="50" CenterY="50"/>
+            </Image.RenderTransform>
+        </Image>
+    </Grid>
+</UserControl>
