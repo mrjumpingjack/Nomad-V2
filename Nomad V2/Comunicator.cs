@@ -61,15 +61,12 @@ namespace Nomad_V2
                             Int32 bytes = stream.Read(data, 0, data.Length);
                             responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
 
-                            //Console.WriteLine(responseData);
 
-                            if (responseData.StartsWith("<SOT>"))
-                                responseData = responseData.Substring("<SOT>".Length);
-
-                            if (responseData.EndsWith("<EOT>"))
-                                responseData = responseData.Substring(0, responseData.Length - "<EOT>".Length);
-
-                            ServerDataRecived?.Invoke(null, responseData);
+                            foreach (var resData in responseData.Split(new string[] { "<SOT>", "<EOT>" },StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                //Console.WriteLine(resData);
+                                ServerDataRecived?.Invoke(null, resData);
+                            }
                         }
 
                         Console.WriteLine("SERVER CONNECTION LOST, RECONNECTING");
@@ -115,12 +112,10 @@ namespace Nomad_V2
             {
                 try
                 {
-                    //Console.WriteLine("pOs:" + GPSController.CurrentPosition == null ? "nix" : GPSController.CurrentPosition.ToString());
-                    String msg = "<SOT> " + "Status;" + GPSController.CurrentPosition.ToString() + ";" + Compass.Heading + ";" + CollisionProtection.GetDistancesAsString() + ";" + WheelRotation.Rotations + ";" + DateTime.Now + "<EOT>";
 
-                    Byte[] data = System.Text.Encoding.ASCII.GetBytes(msg);
-                    stream.Write(data, 0, data.Length);
-                    stream.Flush();
+                    SendToServer("Status;" + GPSController.CurrentPosition.ToString() + ";" + Compass.Heading + ";" + CollisionProtection.GetDistancesAsString() + ";" + WheelRotation.Rotations + ";" + DateTime.Now);
+
+
                 }
                 catch (Exception ex)
                 {
@@ -138,10 +133,10 @@ namespace Nomad_V2
             {
                 if (client.Client.Connected)
                 {
-                    if (message.StartsWith("<SOT>"))
+                    if (!message.StartsWith("<SOT>"))
                         message = "<SOT>" + message;
 
-                    if (message.EndsWith("<EOT>"))
+                    if (!message.EndsWith("<EOT>"))
                         message += "<EOT>";
 
                     Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
@@ -151,15 +146,7 @@ namespace Nomad_V2
                     Int32 bytes = stream.Read(data, 0, data.Length);
                     responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
 
-                    //if (responseData == message)
-                    //    return true;
-                    //else
-                    //    return false;
                 }
-                //else
-                //{
-                //    return false;
-                //}
             }
             catch (Exception)
             {

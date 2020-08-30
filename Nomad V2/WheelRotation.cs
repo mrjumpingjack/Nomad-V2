@@ -8,8 +8,8 @@ namespace Nomad_V2
 {
     public static class WheelRotation
     {
-        public static int Rotations { get; set; }
-        public static double SpeedinKMh { get; set; }
+        public static int Rotations { get; set; } = 0;
+        public static double SpeedinKMh { get; set; } = 0;
 
         public static void Init()
         {

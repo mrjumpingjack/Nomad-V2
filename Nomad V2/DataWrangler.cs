@@ -19,8 +19,14 @@ namespace Nomad_V2
 
         public static bool OverrideCollisionProtection { get; set; } = false;
         public static string Server { get; set; }
-        public static Dictionary<string, Process> StartedClients { get; set; } = new Dictionary<string, Process>();
 
-        public static List<string> clients = new List<string>() { "sonar.py", "steering.py", "compass.py", "gps.py", "rotation.py", };
+        /// <summary>
+        /// List of running python clients; Key is Clientrole"
+        /// </summary>
+        public static Dictionary<string, Process> RunningClients { get; set; } = new Dictionary<string, Process>();
+        public static bool Verbose { get; internal set; }
+        public static bool Basic { get; internal set; }
+
+        public static List<string> clients = new List<string>() {};
     }
 }

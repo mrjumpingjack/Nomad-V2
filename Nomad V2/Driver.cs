@@ -19,19 +19,20 @@ namespace Nomad_V2
         //Autobahnen
         public static bool UseFreeways = false;
 
-
         public static Thread DriveToThread = null;
 
         public static int[] SaftyDistances = new int[] { 50, 50, 50, 50, 10 };
 
-
-        public static GPSPoint Target { get; set; } = null;
+        public static GPSPoint Target { get; set; } = new GPSPoint(-1,-1);
         public static bool Cancel { get;  set; }
+
+        static Random dirrnd = new Random(DateTime.Now.Second);
+
+
 
         public static void Init()
         {
             GPSController.GPSNotAvailable += GPSController_GPSNotAvailable;
-            CollisionProtection.ObsticleDangerouslyClose += CollisionProtection_ObsticleDangerouslyClose;
         }
 
         private static void GPSController_GPSNotAvailable(object sender, EventArgs e)
@@ -39,11 +40,7 @@ namespace Nomad_V2
             Stop();
         }
 
-        private static void CollisionProtection_ObsticleDangerouslyClose(object sender, EventArgs e)
-        {
-            MotorController.EmergencyBreak();
-
-        }
+        
 
         public static void Stop()
         {
@@ -56,7 +53,7 @@ namespace Nomad_V2
                     Cancel = true;
                 }
 
-                MotorController.EmergencyBreak();
+                MotorController.EmergencyBreak("Driver stopped");
                 MotorController.Break();
             }
             catch (Exception ex)
@@ -72,61 +69,83 @@ namespace Nomad_V2
             DriveTo(Target.Latitute + "," + Target.Longitute);
         }
 
-
+        /// <summary>
+        /// Just explore the environment,dodge obsticles
+        /// </summary>
+        /// <param name="minDist"></param>
         public static void Explore(int minDist = 20)
         {
             DriveToThread = new Thread(() =>
             {
                 Console.WriteLine("Start exploring now");
 
+                //FREE THE WHALES, I...I mean motor
                 MotorController.MotorBlocked = false;
+
+                //Show that indeed we are in explroring mode
                 MotorController.Steer((int)SteerDirection.Right);
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
                 MotorController.Steer((int)SteerDirection.Left);
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
                 MotorController.Steer((int)SteerDirection.Forwards);
+
 
                 while (true)
                 {
+                    //1. Drive forwards as long we can
                     MotorController.Forward((int)MotorSpeeds.Slow);
 
-                    while (CollisionProtection.GetDistances()[0] > minDist)
+                    while (CollisionProtection.Sensors[0].Distance > minDist)
                     {
                         Thread.Sleep(50);
                     }
-
                     MotorController.Break();
 
-
+                    //2. We hit something; Stop; Reverse,so we can make turn
                     MotorController.Reverse((int)MotorSpeeds.Slow);
 
-                    while (CollisionProtection.GetDistances()[0] < 60 && CollisionProtection.GetDistances()[1] > minDist)
+                    while (CollisionProtection.Sensors[0].Distance < 60 && CollisionProtection.Sensors[1].Distance > minDist)
                     {
                         Thread.Sleep(50);
                     }
-
                     MotorController.Break();
 
 
-                    MotorController.Steer((int)SteerDirection.Right);
-                    MotorController.Forward((int)MotorSpeeds.Slow);
+                    //3. Randomly choose a direction(which is free) to turn to
+                    var rnddir = dirrnd.Next(2, 3);
+                    var heading = Compass.Heading;
 
-                    while (CollisionProtection.GetDistances()[0] > minDist && CollisionProtection.GetDistances()[0] > minDist)
+                    while (CollisionProtection.Sensors[rnddir].Distance < 60)
+                    {
+                        rnddir = dirrnd.Next(2, 3);
+                        Thread.Sleep(100);
+                    }
+
+                    if (rnddir == 2)
+                        MotorController.Steer((int)SteerDirection.Left);
+                    else if (rnddir == 3)
+                        MotorController.Steer((int)SteerDirection.Right);
+
+                    //4. Make a 90° turn
+                    MotorController.Forward((int)MotorSpeeds.Slow);
+                    while (CollisionProtection.Sensors[1].Distance < minDist && CollisionProtection.Sensors[0].Distance > minDist && (Math.Atan2(Math.Sin(heading - Compass.Heading), Math.Cos(heading - Compass.Heading)) < 90))
                     {
                         Thread.Sleep(50);
                     }
-                }
 
+                    MotorController.Steer((int)SteerDirection.Forwards);
+                }
             });
 
             DriveToThread.Start();
+            DriveToThread.IsBackground = true;
         }
 
 
 
 
         /// <summary>
-        /// Coords in DDD
+        /// Drive to target; Coords in DDD
         /// </summary>
         /// <param name="Coords"></param>
         public static void DriveTo(string Coords = "", int minDist = 50)
@@ -134,7 +153,7 @@ namespace Nomad_V2
             if (DriveToThread != null)
             {
                 DriveToThread.Suspend();
-                MotorController.EmergencyBreak();
+                MotorController.EmergencyBreak("Drive to changed");
             }
 
             Cancel = false;
@@ -165,7 +184,7 @@ namespace Nomad_V2
 
                     MotorController.Forward((int)MotorSpeeds.Slow);
 
-                    while (CollisionProtection.GetDistances()[0] > minDist)
+                    while (CollisionProtection.Sensors[0].Distance > minDist)
                     {
                         Thread.Sleep(200);
                     }
@@ -174,10 +193,10 @@ namespace Nomad_V2
 
                     var headingbefore = Compass.Heading;
 
-                    if (CollisionProtection.GetDistances().All(d => d < 1000))
+                    if (CollisionProtection.Sensors.All(d => d.Distance < 1000))
                     {
                         //Links ist frei
-                        if (CollisionProtection.GetDistances()[2] > minDist)
+                        if (CollisionProtection.Sensors[1].Distance > minDist)
                         {
                             MotorController.Steer((int)SteerDirection.Left);
 
@@ -193,7 +212,7 @@ namespace Nomad_V2
 
                         }
                         //Rechts ist frei
-                        else if (CollisionProtection.GetDistances()[3] > minDist)
+                        else if (CollisionProtection.Sensors[3].Distance > minDist)
                         {
                             MotorController.Steer((int)SteerDirection.Right);
 
@@ -209,7 +228,7 @@ namespace Nomad_V2
 
                         }
                         //NUR hinten frei
-                        else if (CollisionProtection.GetDistances()[1] > minDist)
+                        else if (CollisionProtection.Sensors[1].Distance > minDist)
                         {
                             MotorController.Steer((int)SteerDirection.Forwards);
                             MotorController.Reverse((int)MotorSpeeds.Slow);
@@ -219,25 +238,26 @@ namespace Nomad_V2
             });
 
             DriveToThread.Start();
+            DriveToThread.IsBackground = true;
         }
 
         private static void FreeVehicle(int minDist=20)
         {
-            var lastdistances = CollisionProtection.GetDistances();
+            var lastdistances = CollisionProtection.Sensors.Select(s=>s.Distance);
 
-            while (CollisionProtection.GetDistances().Any(d => d < minDist) && !Cancel)
+            while (CollisionProtection.Sensors.Any(d => d.Distance < minDist) && !Cancel)
             {
-                if ((CollisionProtection.GetDistances()[2] > minDist))
+                if ((CollisionProtection.Sensors[2].Distance > minDist))
                     MotorController.Steer((int)SteerDirection.Left);
-                else if ((CollisionProtection.GetDistances()[3] > minDist))
+                else if ((CollisionProtection.Sensors[3].Distance > minDist))
                     MotorController.Steer((int)SteerDirection.Right);
 
-                else if ((CollisionProtection.GetDistances()[1] > minDist))
+                else if ((CollisionProtection.Sensors[1].Distance > minDist))
                     MotorController.Steer((int)SteerDirection.Forwards);
-                else if ((CollisionProtection.GetDistances()[0] > minDist))
+                else if ((CollisionProtection.Sensors[0].Distance > minDist))
                     MotorController.Steer((int)SteerDirection.Forwards);
 
-                if (CollisionProtection.GetDistances()[0] > minDist && CollisionProtection.GetDistances()[1] > minDist)
+                if (CollisionProtection.Sensors[0].Distance > minDist && CollisionProtection.Sensors[1].Distance > minDist)
                 {
                     Random random = new Random(DateTime.Now.Second);
 
@@ -252,14 +272,14 @@ namespace Nomad_V2
                             break;
                     }
                 }
-                else if (CollisionProtection.GetDistances()[0] > minDist)
+                else if (CollisionProtection.Sensors[0].Distance > minDist)
                     MotorController.Forward((int)MotorSpeeds.Slow);
-                else if (CollisionProtection.GetDistances()[1] > minDist)
+                else if (CollisionProtection.Sensors[1].Distance > minDist)
                     MotorController.Reverse((int)MotorSpeeds.Slow);
                 else
                     throw new Exception("I'M STUCK!!!");
 
-                while (lastdistances.Count(d => d < minDist) != CollisionProtection.GetDistances().Count(d => d < minDist)&& !Cancel)
+                while (lastdistances.Count(d => d < minDist) != CollisionProtection.Sensors.Count(d => d.Distance < minDist)&& !Cancel)
                 {
                     Thread.Sleep(200);
                 }
@@ -286,7 +306,7 @@ namespace Nomad_V2
 
             while (!FunctionHelper.AboutRight(Compass.Heading, TargetAngle, 10) && !Cancel)
             {
-                if (CollisionProtection.GetDistances().Any(d => d < 100))
+                if (CollisionProtection.Sensors.Any(d => d.Distance < 100))
                 {
                     MotorController.Break();
                     FreeVehicle(50);
@@ -309,17 +329,17 @@ namespace Nomad_V2
             else if (d == "r")
             {
 
-                while (CollisionProtection.GetDistances()[0] + (CarInfo.Width / 2) < CarInfo.TurningCircleRadius)
+                while (CollisionProtection.Sensors[0].Distance + (CarInfo.Width / 2) < CarInfo.TurningCircleRadius)
                 {
                     MotorController.Reverse((int)MotorSpeeds.Slow);
                 }
                 MotorController.Break();
 
-                var frontdiff = CollisionProtection.GetDistances()[0];
+                var frontdiff = CollisionProtection.Sensors[0].Distance;
 
                 MotorController.Steer((int)SteerDirection.Right);
 
-                while(CollisionProtection.GetDistances()[3]> Distance)
+                while(CollisionProtection.Sensors[3].Distance > Distance)
                 {
 
                 }

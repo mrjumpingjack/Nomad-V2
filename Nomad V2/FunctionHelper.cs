@@ -47,7 +47,7 @@ namespace Nomad_V2
             ClientProcess.StartInfo.RedirectStandardOutput = true;
             ClientProcess.Start();
 
-            DataWrangler.StartedClients.Add(clientname, ClientProcess);
+            DataWrangler.RunningClients.Add(clientname, ClientProcess);
 
             Console.WriteLine("Starting:" + clientname);
         }

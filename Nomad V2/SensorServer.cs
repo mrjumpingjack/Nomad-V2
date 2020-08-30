@@ -11,14 +11,14 @@ namespace Nomad_V2
 {
     public static class SensorServer
     {
-        static List<handleClinet> Clients = new List<handleClinet>();
+        static List<ClientHandler> ClientHandlers = new List<ClientHandler>();
 
         public static event EventHandler<string> SonarDataRecived;
         public static event EventHandler<string> WheelDataRecived;
         public static event EventHandler<string> CompassDataRecived;
 
         public static bool Cancel = false;
-        
+
         public static void Init()
         {
             TcpListener serverSocket = new TcpListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 13014));
@@ -35,10 +35,13 @@ namespace Nomad_V2
                      counter += 1;
                      clientSocket = serverSocket.AcceptTcpClient();
                      Console.WriteLine(" >> " + "Client No:" + Convert.ToString(counter) + " started!");
-                     handleClinet client = new handleClinet();
-                     client.startClient(clientSocket, Convert.ToString(counter));
-                     client.DataRecived += Client_DataRecived;
-                     Clients.Add(client);
+
+                     ClientHandler clientHandler = new ClientHandler();
+                     clientHandler.startClient(clientSocket, Convert.ToString(counter));
+                     clientHandler.DataRecived += Client_DataRecived;
+                     clientHandler.lastCallCheckTimer.Elapsed += LastCallCheckTimer_Elapsed;
+                     clientHandler.lastCallCheckTimer.Start();
+                     ClientHandlers.Add(clientHandler);
                  }
 
                  clientSocket.Close();
@@ -52,12 +55,66 @@ namespace Nomad_V2
 
         }
 
+        private static void LastCallCheckTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            try
+            {
+                ((CustomTimer)sender).Handler.lastCallCheckTimer.Stop();
+
+                var clientHandler = ClientHandlers.First(c => c.ClientRole == ((CustomTimer)sender).ClientRole);
+
+                if (clientHandler.MaxDownTime == -1)
+                    return;
+
+                if (clientHandler.LastCall < DateTime.Now.AddSeconds(-clientHandler.MaxDownTime))
+                {
+                    Console.WriteLine(clientHandler.ClientRole + " SEEMS TO BE DOWN!!!");
+
+                    //Console.WriteLine(DataWrangler.RunningClients.Count);
+
+                    //foreach (var cl in DataWrangler.RunningClients)
+                    //{
+                    //    Console.WriteLine(cl.Key);
+                    //    Console.WriteLine(cl.Value);
+                    //}
+
+                    var runningrunningclients = DataWrangler.RunningClients.Where(sc => !sc.Value.HasExited);
+                    Console.WriteLine(runningrunningclients.Count());
+
+
+                    Console.WriteLine(String.Join(",", (runningrunningclients.Select(rc => rc.Key + ":" + rc.Value))));
+                    Console.WriteLine(runningrunningclients.First(sc => sc.Key == clientHandler.ClientRole).Value);
+
+
+                    Console.WriteLine("KILLING: " + runningrunningclients.First(sc => sc.Key == clientHandler.ClientRole).Value);
+                    runningrunningclients.First(sc => sc.Key == clientHandler.ClientRole).Value.Kill();
+
+
+                    Console.WriteLine("REMOVING " + clientHandler.ClientRole + " FROM LIST OF CLIENTS");
+                    DataWrangler.RunningClients.Remove(clientHandler.ClientRole);
+                    clientHandler.Dispose();
+
+                    Console.WriteLine("REMOVING " + clientHandler.ClientRole + " FROM LIST OF HANDLERS");
+                    ClientHandlers.Remove(clientHandler);
+
+                    Console.WriteLine("Restarting Client....");
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            ((CustomTimer)sender).Handler.lastCallCheckTimer.Start();
+        }
+    
 
         public static bool SendToClient(string role, string data)
         {
             try
             {
-                if(Clients.Count==0)
+                if(ClientHandlers.Count==0)
                 {
                     Console.WriteLine("NO CLIENTS ONLINE!!!!");
                     return false;
@@ -71,7 +128,7 @@ namespace Nomad_V2
                     data = data + "<EOT>";
 
 
-                Clients.First(c => c.ClientRole == role).Send(data);
+                ClientHandlers.First(c => c.ClientRole == role).Send(data);
             }
             catch (Exception ex)
             {
@@ -88,35 +145,37 @@ namespace Nomad_V2
         private static void Client_DataRecived(object sender, string e)
         {
 
-            if (((handleClinet)sender).ClientRole.ToLower().Contains("wheelrotation"))
+            if (((ClientHandler)sender).ClientRole.ToLower().Contains("wheelrotation"))
             {
                 WheelDataRecived.Invoke(null, e);
             }
-            else if (((handleClinet)sender).ClientRole.ToLower().Contains("sonar"))
+            else if (((ClientHandler)sender).ClientRole.ToLower().Contains("sonar"))
             {
                 SonarDataRecived.Invoke(null, e);
 
             }
-            else if (((handleClinet)sender).ClientRole.ToLower().Contains("compass"))
+            else if (((ClientHandler)sender).ClientRole.ToLower().Contains("compass"))
             {
                 CompassDataRecived.Invoke(null, e);
             }
         }
     }
 
-    public class handleClinet
+    public class ClientHandler
     {
-        public bool Verbose = false;
         public event EventHandler<string> DataRecived;
         public string ClientRole = "Unknown";
+        public int MaxDownTime = 5;
 
-        System.Timers.Timer lastCallCheckTimer = new System.Timers.Timer(3000);
+        public CustomTimer lastCallCheckTimer = new CustomTimer(3000);
 
-        DateTime LastCall;
+        public DateTime LastCall;
 
         TcpClient clientSocket;
         string clNo;
         NetworkStream networkStream;
+
+        Thread ListenThread;
 
         public void startClient(TcpClient inClientSocket, string clientNo)
         {
@@ -125,23 +184,20 @@ namespace Nomad_V2
 
             networkStream = clientSocket.GetStream();
             Console.WriteLine("Client connected:" + clientNo);
-            Thread ctThread = new Thread(Listen);
-            ctThread.Start();
-            ctThread.IsBackground = true;
-
-            lastCallCheckTimer.Elapsed += LastCallCheckTimer_Elapsed;
-            lastCallCheckTimer.Start();
+            ListenThread = new Thread(Listen);
+            ListenThread.Start();
+            ListenThread.IsBackground = true;
         }
 
-        private void LastCallCheckTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+
+        public void Dispose()
         {
-            if (LastCall < DateTime.Now.AddSeconds(5))
-            {
-                Console.WriteLine(ClientRole + " SEEMS TO BE DOWN!!!");
-                DataWrangler.StartedClients.First(sc => sc.Key == ClientRole).Value.Kill();
-                FunctionHelper.StartClientProcesses(ClientRole);
-            }
+            lastCallCheckTimer.Stop();
+            clientSocket.Close();
+            networkStream.Close();
+            ListenThread.Suspend();
         }
+
 
         private void Listen()
         {
@@ -166,14 +222,17 @@ namespace Nomad_V2
                         if (dataFromClient.StartsWith("ClientRole="))
                         {
                             ClientRole = dataFromClient.Substring("ClientRole=".Length);
+                            lastCallCheckTimer.ClientRole = ClientRole;
+                            lastCallCheckTimer.Handler = this;
                             Console.WriteLine("Client role is " + ClientRole);
+                            SpecialSetup();
                         }
                         else
                         {
                             DataRecived.Invoke(this, dataFromClient);
                         }
 
-                        if (Verbose)
+                        if (DataWrangler.Verbose)
                             Console.WriteLine("RAW:" + ClientRole + ":" + dataFromClient);
 
                         LastCall = DateTime.Now;
@@ -183,6 +242,16 @@ namespace Nomad_V2
                 {
                     Console.WriteLine("ERROR:" + ex.ToString());
                 }
+            }
+        }
+
+
+        private void SpecialSetup()
+        {
+            if(ClientRole=="Steering")
+            {
+                //Prevent steering.py restart
+                MaxDownTime = -1;
             }
         }
 
@@ -197,4 +266,15 @@ namespace Nomad_V2
         }
     }
 
+    public class CustomTimer : System.Timers.Timer
+    {
+        public string ClientRole;
+        public ClientHandler Handler;
+
+
+        public CustomTimer(int interval)
+        {
+            this.Interval = interval;
+        }
+    }
 }

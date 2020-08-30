@@ -99,10 +99,10 @@ namespace ControllPanel
 
             try
             {
-                if (data.StartsWith("<SOT>"))
+                if (!data.StartsWith("<SOT>"))
                     data = "<SOT>" + data;
 
-                if (data.EndsWith("<EOT>"))
+                if (!data.EndsWith("<EOT>"))
                     data += "<EOT>";
 
                 Console.WriteLine(data);

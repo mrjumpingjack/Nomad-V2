@@ -143,6 +143,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Converters\DoubleToColorConverter.cs" />
+    <Compile Include="Converters\DoubleToColorInvertConverter.cs" />
     <Compile Include="XInputController.cs" />
     <Page Include="Arrow.xaml">
       <SubType>Designer</SubType>

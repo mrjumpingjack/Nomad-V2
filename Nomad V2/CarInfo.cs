@@ -9,10 +9,11 @@ namespace Nomad_V2
    public static class CarInfo
     {
 
-        public static double Length { get; set; }
-        public static double Width { get; set; }
-        public static double Height { get; set; }
+        public const double Length = 25;
+        public const double Width = 35;
+        public const double Height = 70;
 
-        public static double TurningCircleRadius { get; internal set; }
+        public const double TurningCircleRadius = 80;
+        public const double SafeTurningCircleRadius = 100;
     }
 }

@@ -157,14 +157,18 @@ namespace ControllPanel
         {
             Dispatcher.Invoke(() =>
             {
-                var Messages = Data.Split(new string[] { "<SOT> " }, StringSplitOptions.RemoveEmptyEntries);
+                var Messages = Data.Split(new string[] { "<SOT>" }, StringSplitOptions.RemoveEmptyEntries);
 
                 foreach (string msg in Messages)
                 {
                     if (!msg.EndsWith("<EOT>"))
                         continue;
 
-                    var MSGParts = msg.Split(';');
+
+
+                    var msgc = msg.Substring(0, msg.Length - "<SOT>".Length);
+
+                    var MSGParts = msgc.Split(';');
 
                     switch (MSGParts[0])
                     {
@@ -180,6 +184,28 @@ namespace ControllPanel
 
                             DataHelper.Rotations = Convert.ToInt32(MSGParts[4]);
 
+                            break;
+
+
+                        case "Setup":
+                            switch (MSGParts[1])
+                            {
+                                case "Sensor":
+
+                                    switch (MSGParts[2])
+                                    {
+                                        case "Sonar":
+
+                                            switch (MSGParts[3])
+                                            {
+                                                case "Enabled":
+                                                    SensorDock.Children.OfType<StackPanel>().First(s => s.Tag.ToString() == MSGParts[4]).Children[1].Visibility = (MSGParts[5] == "1" ? Visibility.Collapsed : Visibility.Visible);
+                                                    break;
+                                            }
+                                            break;
+                                    }
+                                    break;
+                            }
                             break;
 
                         default:
@@ -337,17 +363,37 @@ namespace ControllPanel
 
         private void On_BtnExplore(object sender, RoutedEventArgs e)
         {
-            if (OPMode == OPMode.Automatic)
+            if (BtnExplore.Content.ToString() == "Start exploring")
             {
-                SendControllerInput = false;
+                if (OPMode == OPMode.Automatic)
+                {
+                    SendControllerInput = false;
 
-                comunicator.Send("Mode;1");
+                    comunicator.Send("Mode;1");
 
-                TB_Target.Text = "EXPLORE";
-
-
-                comunicator.Send("Explore;0");
+                    comunicator.Send("Explore;1");
+                    BtnExplore.Content = "Stop exploring";
+                }
             }
+            else
+            {
+                comunicator.Send("Explore;0");
+                comunicator.Send("Mode;0");
+
+                BtnExplore.Content = "Start exploring";
+                SendControllerInput = true;
+
+            }
+
+
+        
+        }
+
+        private void On_ToogleIgnoreSensor(object sender, MouseButtonEventArgs e)
+        {
+            int SID = Convert.ToInt32(((StackPanel)sender).Tag.ToString());
+
+            comunicator.Send("Setup;Sensor;Sonar;Enabled;" + SID);
         }
     }
 
@@ -362,48 +408,3 @@ namespace ControllPanel
     }
 
 }
-
-        //private void Forward_Click(object sender, RoutedEventArgs e)
-        //{
-        //    comunicator.Send("Direct;forward," + tb_value.Text);
-        //}
-
-        //private void Reverse_Click(object sender, RoutedEventArgs e)
-        //{
-        //    comunicator.Send("Direct;reverse," + tb_value.Text);
-        //}
-
-        //private void Break_Click(object sender, RoutedEventArgs e)
-        //{
-        //    comunicator.Send("Direct;breaking," + tb_value.Text);
-        //}
-
-        //private void Connect_Click(object sender, RoutedEventArgs e)
-        //{
-        //    comunicator.Connect();
-        //}
-   
-
-    // 52° 19.90382';009° 12.87239'
-    //var CP = "52° 19.90307';009° 12.86655'";
-    //CP = FixConutation("$GPGLL,5219.90382,N,00912.87239,E,100449.00,A,A*63");
-
-    //var ddd = DMMToDDD(CP);
-    //Console.WriteLine("DDD: " + ddd);
-
-    //var dms = DMMToDMS(CP);
-    //Console.WriteLine("DMS: " + dms);
-
-    //var dmm = DMSToDMM(dms);
-    //Console.WriteLine("DMM: " + dmm);
-
-
-
-    //dms = DDDToDMS(ddd);
-    //Console.WriteLine("dms: " + dms);
-
-
-    //var p1 = "52.334516; 9.256494";
-
-
-

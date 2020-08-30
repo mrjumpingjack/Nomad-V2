@@ -15,6 +15,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <Converters:DoubleToColorConverter x:Key="DoubleToColorConverter"/>
+            <Converters:DoubleToColorInvertConverter x:Key="DoubleToColorInvertConverter"/>
         </ResourceDictionary>
     </Window.Resources>
     
@@ -61,11 +62,29 @@
 
             <StackPanel Margin="5" Grid.Column="0" Grid.Row="2">
                 <!--<CheckBox Content="Always center on vehicle" Checked="{Binding GoToCarPosOnUpdate}"/>-->
-                <TextBlock Text="{Binding CurrentCarPos}"/>
-                <TextBlock Text="{Binding CurrentCarHeading}"/>
-                <TextBlock Text="{Binding Rotations}"/>
-                <TextBlock Text="{Binding SpeedinKMh}"/>
-                <ListBox ItemsSource="{Binding Distances}"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Vehicle position:"/>
+                    <TextBlock Text="{Binding CurrentCarPos}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Heading:"/>
+                    <TextBlock Text="{Binding CurrentCarHeading}"/>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Rotations in r/sec:"/>
+                    <TextBlock Text="{Binding Rotations}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Speed in Km/h:"/>
+                    <TextBlock Text="{Binding SpeedinKMh}"/>
+                </StackPanel>
+                
+                
+                
             </StackPanel>
 
             <StackPanel Grid.Row="2" Grid.Column="1" Margin="5">
@@ -76,7 +95,7 @@
                     <TextBox Width="160" Margin="0,0,5,0" x:Name="TB_Target"/>
                     <Button HorizontalAlignment="Right" Content="GO!" Width="80" Click="On_BtnGoHere"/>
                 </StackPanel>
-                <Button HorizontalAlignment="Left" Content="Explore!" Margin="0,10,0,0" Width="80" Click="On_BtnExplore"/>
+                <Button Name="BtnExplore" HorizontalAlignment="Left" Content="Start exploring" Margin="0,10,0,0" Width="80" Click="On_BtnExplore"/>
             </StackPanel>
 
 
@@ -84,15 +103,48 @@
 
 
             <StackPanel x:Name="ColINFOW" Grid.Column="1" Grid.Row="1">
-                <DockPanel>
-                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFront, Converter={StaticResource DoubleToColorConverter}}"/>
-                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFrontGab, Converter={StaticResource DoubleToColorConverter}}"/>
+                <TextBlock Margin="5,10,0,0" Text="Sonar distances:"/>
+                <DockPanel x:Name="SensorDock">
+                    <StackPanel Tag="0" MouseDown="On_ToogleIgnoreSensor" VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFront, Converter={StaticResource DoubleToColorConverter}}">
+                        <TextBlock Panel.ZIndex="1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding ValueFront}" />
+                        <Canvas Margin="0,-15,0,0" Panel.ZIndex="0" Visibility="Collapsed">
+                            <Line X1="0" Y1="0" X2="100" Y2="30" Stroke="Black" StrokeThickness="1"></Line>
+                            <Line X1="0" Y1="30" X2="100" Y2="0" Stroke="Black" StrokeThickness="1"></Line>
+                        </Canvas>
+                    </StackPanel>
 
-                    <Canvas VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Bottom" Margin="0,-55" Height="30" Width="100" Background="{Binding ValueBack, Converter={StaticResource DoubleToColorConverter}}"/>
+                    <StackPanel Tag="4" MouseDown="On_ToogleIgnoreSensor" VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Top" Margin="0,10,0,0" Height="30" Width="100" Background="{Binding ValueFrontGab, Converter={StaticResource DoubleToColorInvertConverter}}">
+                        <TextBlock Panel.ZIndex="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding ValueFrontGab}"/>
+                        <Canvas Margin="0,-15,0,0" Panel.ZIndex="0" Visibility="Collapsed">
+                            <Line X1="0" Y1="0" X2="100" Y2="30" Stroke="Black" StrokeThickness="1"></Line>
+                            <Line X1="0" Y1="30" X2="100" Y2="0" Stroke="Black" StrokeThickness="1"></Line>
+                        </Canvas>
+                    </StackPanel>
 
-                    <Canvas VerticalAlignment="Center" HorizontalAlignment="Left" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueLeft, Converter={StaticResource DoubleToColorConverter}}"/>
+                    <StackPanel Tag="1" MouseDown="On_ToogleIgnoreSensor" VerticalAlignment="Top" HorizontalAlignment="Center" DockPanel.Dock="Bottom" Margin="0,-55" Height="30" Width="100" Background="{Binding ValueBack, Converter={StaticResource DoubleToColorConverter}}">
+                        <TextBlock Panel.ZIndex="1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding ValueBack}"/>
+                        <Canvas Margin="0,-15,0,0" Panel.ZIndex="0" Visibility="Collapsed">
+                            <Line X1="0" Y1="0" X2="100" Y2="30" Stroke="Black" StrokeThickness="1"></Line>
+                            <Line X1="0" Y1="30" X2="100" Y2="0" Stroke="Black" StrokeThickness="1"></Line>
+                        </Canvas>
+                    </StackPanel>
 
-                    <Canvas VerticalAlignment="Center" HorizontalAlignment="Right" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueRight, Converter={StaticResource DoubleToColorConverter}}"/>
+                    <StackPanel Tag="2" MouseDown="On_ToogleIgnoreSensor" VerticalAlignment="Center" HorizontalAlignment="Left" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueLeft, Converter={StaticResource DoubleToColorConverter}}">
+                        <TextBlock Panel.ZIndex="1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding ValueLeft}"/>
+                        <Canvas Margin="0,-15,0,0" Panel.ZIndex="0" Visibility="Collapsed">
+                            <Line X1="0" Y1="0" X2="30" Y2="100" Stroke="Black" StrokeThickness="1"></Line>
+                            <Line X1="0" Y1="100" X2="30" Y2="0" Stroke="Black" StrokeThickness="1"></Line>
+                        </Canvas>
+                    </StackPanel>
+
+                    <StackPanel Tag="3" MouseDown="On_ToogleIgnoreSensor" VerticalAlignment="Center" HorizontalAlignment="Right" DockPanel.Dock="Left" Margin="10" Height="100" Width="30" Background="{Binding ValueRight, Converter={StaticResource DoubleToColorConverter}}">
+                        <TextBlock Panel.ZIndex="1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding ValueRight}"/>
+                        <Canvas Margin="0,-15,0,0" Panel.ZIndex="0" Visibility="Collapsed">
+                            <Line X1="0" Y1="0" X2="30" Y2="100" Stroke="Black" StrokeThickness="1"></Line>
+                            <Line X1="0" Y1="100" X2="30" Y2="0" Stroke="Black" StrokeThickness="1"></Line>
+                        </Canvas>
+                    </StackPanel>
+                    
                 </DockPanel>
             </StackPanel>
 
